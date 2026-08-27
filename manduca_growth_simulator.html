@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manduca Sexta Growth Simulator</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .card {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 1.25rem;
+      color: #0f172a;
+    }
+    p.subtitle {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #334155;
+    }
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background-color: #ffffff;
+      font-size: 0.95rem;
+      color: #0f172a;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+    .chart-container {
+      position: relative;
+      height: 400px;
+      width: 100%;
+    }
+    .info-panel {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background-color: #f1f5f9;
+      border-left: 4px solid #2563eb;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Manduca Sexta Larval Growth Simulator</h2>
+    <p class="subtitle">Select an ambient temperature environment to see how metabolic rates impact body mass over the first 12 days.</p>
+
+    <div class="controls">
+      <label for="tempSelect">Temperature Profile & Growth Speed:</label>
+      <select id="tempSelect">
+        <option value="standard" selected>Standard Room Temp (70–75°F) - Moderate Growth</option>
+        <option value="cool">Cool Temp (62–68°F) - Slow Growth</option>
+        <option value="hot">Hot Temp (80–85°F) - Accelerated Growth</option>
+      </select>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="growthChart"></canvas>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+      <strong>Environment Note:</strong> At standard room temperatures, caterpillars show steady exponential growth, reaching 11.0g by Day 12.
+    </div>
+  </div>
+
+  <script>
+    const growthData = {
+      standard: {
+        label: "Standard Room Temp (70–75°F)",
+        color: "#2563eb",
+        bgColor: "rgba(37, 99, 235, 0.1)",
+        masses: [0.001, 0.01, 0.03, 0.10, 0.30, 0.80, 1.80, 3.20, 5.00, 7.00, 8.80, 10.10, 11.00],
+        notes: [
+          "Day 0: Egg stage (~0.001g).",
+          "Day 1: 1st instar hatched (~0.01g).",
+          "Day 2: Feeding on artificial diet (~0.03g).",
+          "Day 3: 2nd instar (~0.10g).",
+          "Day 4: Steady feeding (~0.30g).",
+          "Day 5: 3rd instar transition (~0.80g).",
+          "Day 6: Exponential phase begins (~1.80g).",
+          "Day 7: Finger-sized caterpillar (~3.20g).",
+          "Day 8: Heavy diet consumption (~5.00g).",
+          "Day 9: 4th/5th instar transition (~7.00g).",
+          "Day 10: Late instar rapid gain (~8.80g).",
+          "Day 11: Approaching peak mass (~10.10g).",
+          "Day 12: Target larval weight reached (~11.00g)."
+        ],
+        summary: "<strong>Standard Temp (70–75°F):</strong> Textbook exponential growth trajectory reaching 11.0g by Day 12."
+      },
+      cool: {
+        label: "Cool Temp (62–68°F)",
+        color: "#0284c7",
+        bgColor: "rgba(2, 132, 199, 0.1)",
+        masses: [0.001, 0.003, 0.01, 0.03, 0.08, 0.20, 0.45, 0.85, 1.40, 2.00, 2.70, 3.40, 4.00],
+        notes: [
+          "Day 0: Egg stage.",
+          "Day 1: Slow hatch (~0.003g).",
+          "Day 2: Sluggish feeding (~0.01g).",
+          "Day 3: Small 1st/2nd instar (~0.03g).",
+          "Day 4: Slow progression (~0.08g).",
+          "Day 5: 2nd instar (~0.20g).",
+          "Day 6: Substantially smaller than standard (~0.45g).",
+          "Day 7: Low waste output (~0.85g).",
+          "Day 8: Steady but slow curve (~1.40g).",
+          "Day 9: Approaching 3rd instar (~2.00g).",
+          "Day 10: Delayed instar progression (~2.70g).",
+          "Day 11: Slow feeding continues (~3.40g).",
+          "Day 12: Final weight (~4.00g)."
+        ],
+        summary: "<strong>Cool Temp (62–68°F):</strong> Depressed enzymatic activity slows development, capping body mass at 4.0g by Day 12."
+      },
+      hot: {
+        label: "Hot Temp (80–85°F)",
+        color: "#dc2626",
+        bgColor: "rgba(220, 38, 38, 0.1)",
+        masses: [0.001, 0.015, 0.08, 0.35, 1.10, 2.50, 4.80, 7.20, 9.50, 10.80, 10.20, 9.10, 8.20],
+        notes: [
+          "Day 0: Egg stage.",
+          "Day 1: Rapid hatch (~0.015g).",
+          "Day 2: Voracious 2nd instar (~0.08g).",
+          "Day 3: Rapid weight jump (~0.35g).",
+          "Day 4: 3rd instar early (~1.10g).",
+          "Day 5: Finger-sized already (~2.50g).",
+          "Day 6: Heavy frass production (~4.80g).",
+          "Day 7: Massive diet consumption (~7.20g).",
+          "Day 8: Rapid growth surge (~9.50g).",
+          "Day 9: Peak mass reached early (~10.80g).",
+          "Day 10: Gut purge begins (~10.20g).",
+          "Day 11: Wandering phase weight loss (~9.10g).",
+          "Day 12: Preparing to pupate (~8.20g)."
+        ],
+        summary: "<strong>Hot Temp (80–85°F):</strong> Accelerated metabolic rate leads to rapid feeding, early peak weight (~10.8g), and early gut purge."
+      }
+    };
+
+    const labels = ["Day 0", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7", "Day 8", "Day 9", "Day 10", "Day 11", "Day 12"];
+
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    let currentProfile = growthData.standard;
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: currentProfile.label,
+          data: currentProfile.masses,
+          borderColor: currentProfile.color,
+          backgroundColor: currentProfile.bgColor,
+          borderWidth: 3,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 5,
+          pointHoverRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const dayIndex = context.dataIndex;
+                const mass = context.parsed.y;
+                return [
+                  ` Mass: ${mass} grams`,
+                  ` ${currentProfile.notes[dayIndex]}`
+                ];
+              }
+            }
+          },
+          legend: {
+            display: true,
+            position: 'top'
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Days Post-Hatch',
+              font: { weight: 'bold' }
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Caterpillar Mass (Grams)',
+              font: { weight: 'bold' }
+            },
+            beginAtZero: true,
+            max: 12
+          }
+        }
+      }
+    });
+
+    const selectElem = document.getElementById('tempSelect');
+    const infoPanel = document.getElementById('infoPanel');
+
+    selectElem.addEventListener('change', (e) => {
+      const selectedKey = e.target.value;
+      currentProfile = growthData[selectedKey];
+
+      chart.data.datasets[0].label = currentProfile.label;
+      chart.data.datasets[0].data = currentProfile.masses;
+      chart.data.datasets[0].borderColor = currentProfile.color;
+      chart.data.datasets[0].backgroundColor = currentProfile.bgColor;
+      chart.update();
+
+      infoPanel.innerHTML = currentProfile.summary;
+    });
+  </script>
+</body>
+</html>
