@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manduca Sexta Diet & Growth Simulator</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .card {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 1.25rem;
+      color: #0f172a;
+    }
+    p.subtitle {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #334155;
+    }
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background-color: #ffffff;
+      font-size: 0.95rem;
+      color: #0f172a;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+    select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+    .chart-container {
+      position: relative;
+      height: 400px;
+      width: 100%;
+    }
+    .info-panel {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background-color: #f1f5f9;
+      border-left: 4px solid #16a34a;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Manduca Sexta Diet & Growth Simulator</h2>
+    <p class="subtitle">Select a diet condition to analyze how nutrient quality impacts caterpillar body mass over 12 days.</p>
+
+    <div class="controls">
+      <label for="dietSelect">Diet Condition:</label>
+      <select id="dietSelect">
+        <option value="groupA" selected>Group A: Fresh, Nutrient-Rich Diet</option>
+        <option value="groupB">Group B: Degraded, Nutrient-Poor Diet</option>
+      </select>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="growthChart"></canvas>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+      <strong>Group A (Fresh Diet):</strong> High protein and hydration support rapid exponential growth, reaching 11.0g by Day 12.
+    </div>
+  </div>
+
+  <script>
+    const labels = ["Day 0", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7", "Day 8", "Day 9", "Day 10", "Day 11", "Day 12"];
+
+    const groupAData = {
+      label: "Group A (Fresh, High-Nutrient Diet)",
+      color: "#16a34a",
+      bgColor: "rgba(22, 163, 74, 0.1)",
+      masses: [0.001, 0.01, 0.03, 0.10, 0.30, 0.80, 1.80, 3.20, 5.00, 7.00, 8.80, 10.10, 11.00]
+    };
+
+    const groupBData = {
+      label: "Group B (Degraded, Low-Nutrient Diet)",
+      color: "#d97706",
+      bgColor: "rgba(217, 119, 6, 0.1)",
+      masses: [0.001, 0.005, 0.015, 0.04, 0.10, 0.25, 0.50, 0.95, 1.50, 2.20, 3.00, 3.80, 4.50]
+    };
+
+    const summaries = {
+      groupA: "<strong>Group A (Fresh Diet):</strong> High protein and hydration support rapid exponential growth, reaching 11.0g by Day 12.",
+      groupB: "<strong>Group B (Degraded Diet):</strong> Hard, dry diet reduces intake and nutritional value, depressing growth rate to only 4.5g by Day 12."
+    };
+
+    const ctx = document.getElementById('growthChart').getContext('2d');
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: groupAData.label,
+          data: groupAData.masses,
+          borderColor: groupAData.color,
+          backgroundColor: groupAData.bgColor,
+          borderWidth: 3,
+          fill: true,
+          tension: 0.3,
+          pointRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y} grams`;
+              }
+            }
+          },
+          legend: {
+            display: true,
+            position: 'top'
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Days Post-Hatch',
+              font: { weight: 'bold' }
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Caterpillar Mass (Grams)',
+              font: { weight: 'bold' }
+            },
+            beginAtZero: true,
+            max: 12
+          }
+        }
+      }
+    });
+
+    const selectElem = document.getElementById('dietSelect');
+    const infoPanel = document.getElementById('infoPanel');
+
+    selectElem.addEventListener('change', (e) => {
+      const selectedKey = e.target.value;
+
+      if (selectedKey === "groupA") {
+        chart.data.datasets[0].label = groupAData.label;
+        chart.data.datasets[0].data = groupAData.masses;
+        chart.data.datasets[0].borderColor = groupAData.color;
+        chart.data.datasets[0].backgroundColor = groupAData.bgColor;
+      } else if (selectedKey === "groupB") {
+        chart.data.datasets[0].label = groupBData.label;
+        chart.data.datasets[0].data = groupBData.masses;
+        chart.data.datasets[0].borderColor = groupBData.color;
+        chart.data.datasets[0].backgroundColor = groupBData.bgColor;
+      }
+
+      chart.update();
+      infoPanel.innerHTML = summaries[selectedKey];
+    });
+  </script>
+</body>
+</html>
