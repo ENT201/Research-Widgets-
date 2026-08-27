@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manduca Pupation Chamber Simulator</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .card {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    h3 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 1.25rem;
+      text-align: center;
+      color: #0f172a;
+    }
+    p.subtitle {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 0.875rem;
+      text-align: center;
+      color: #64748b;
+    }
+    .control-group {
+      margin-bottom: 18px;
+    }
+    .control-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 8px;
+      color: #334155;
+      display: block;
+      text-align: center;
+    }
+    .button-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 8px 14px;
+      border: 1px solid #cbd5e1;
+      background-color: #f1f5f9;
+      color: #334155;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.825rem;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      background-color: #e2e8f0;
+    }
+    button.active {
+      background-color: #2563eb;
+      color: #ffffff;
+      border-color: #1d4ed8;
+    }
+    .chart-container {
+      position: relative;
+      height: 320px;
+      width: 100%;
+      margin-top: 15px;
+    }
+    .status {
+      text-align: center;
+      font-weight: 600;
+      padding: 12px 16px;
+      margin-top: 20px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h3>Virtual Pupation Chamber Simulator</h3>
+    <p class="subtitle">Test how soil depth and moisture levels impact pupal cell stability and adult emergence success.</p>
+
+    <!-- Soil Depth Controls -->
+    <div class="control-group">
+      <span class="control-label">Substrate / Soil Depth:</span>
+      <div class="button-row" id="depthControls">
+        <button onclick="setDepth('0in', this)">0" (Surface Only)</button>
+        <button onclick="setDepth('1in', this)">1" (Shallow Soil)</button>
+        <button class="active" onclick="setDepth('3in', this)">3"-4" (Ideal Soil)</button>
+        <button onclick="setDepth('tube', this)">Artificial Tube</button>
+      </div>
+    </div>
+
+    <!-- Soil Moisture Controls -->
+    <div class="control-group">
+      <span class="control-label">Moisture Level:</span>
+      <div class="button-row" id="moistureControls">
+        <button onclick="setMoisture('dry', this)">Dry / Desiccated</button>
+        <button class="active" onclick="setMoisture('ideal', this)">Ideal Dampness</button>
+        <button onclick="setMoisture('saturated', this)">Waterlogged / Oversaturated</button>
+      </div>
+    </div>
+
+    <!-- Chart Canvas -->
+    <div class="chart-container">
+      <canvas id="pupationChart"></canvas>
+    </div>
+
+    <!-- Dynamic Status Readout -->
+    <div id="statusBox" class="status" style="background:#e2f0d9; color:#385723;">
+      Chamber State: Optimal Underground Cell | Safe Skin Shedding & Peak Emergence
+    </div>
+  </div>
+
+  <script>
+    // State management
+    let selectedDepth = '3in';
+    let selectedMoisture = 'ideal';
+
+    const timeline = ['Pre-Pupa (Day 1)', 'Skin Shed (Day 3)', 'Histolysis (Day 7)', 'Adult Form (Day 14)', 'Emergence (Day 18)'];
+
+    // Data matrix for combinations
+    const matrix = {
+      '0in-dry': {
+        emergence: [95, 70, 45, 25, 15],
+        risk: [5, 40, 70, 85, 90],
+        status: "Chamber State: Surface Exposure & Desiccation | High Predation & Deformed Wing Risk",
+        color: "#fce4d6", text: "#c65911"
+      },
+      '0in-ideal': {
+        emergence: [95, 75, 55, 40, 30],
+        risk: [5, 30, 50, 65, 75],
+        status: "Chamber State: Surface Exposure | Lack of Vertical Wall Leads to Incomplete Skin Shedding",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      '0in-saturated': {
+        emergence: [95, 60, 30, 15, 5],
+        risk: [5, 50, 80, 90, 98],
+        status: "Chamber State: Mold & Bacterial Infection | Severe Cuticular Rot",
+        color: "#fce4d6", text: "#c65911"
+      },
+      '1in-dry': {
+        emergence: [95, 80, 60, 45, 35],
+        risk: [5, 25, 45, 60, 70],
+        status: "Chamber State: Chamber Collapse | Shallow Soil Dries Fast and Crumbles",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      '1in-ideal': {
+        emergence: [95, 88, 78, 70, 65],
+        risk: [5, 15, 25, 32, 38],
+        status: "Chamber State: Moderate Cell Stability | Adequate for Survival but Small Chamber Size",
+        color: "#e2f0d9", text: "#385723"
+      },
+      '1in-saturated': {
+        emergence: [95, 70, 45, 30, 20],
+        risk: [5, 35, 60, 75, 85],
+        status: "Chamber State: Soil Compaction | Lack of Air Exchange in Shallow Mud",
+        color: "#fce4d6", text: "#c65911"
+      },
+      '3in-dry': {
+        emergence: [95, 82, 68, 55, 45],
+        risk: [5, 20, 35, 48, 58],
+        status: "Chamber State: Dry Underground Cell | Risk of Pupal Desiccation (Drying Out)",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      '3in-ideal': {
+        emergence: [98, 96, 95, 95, 94],
+        risk: [3, 4, 5, 5, 6],
+        status: "Chamber State: Optimal Underground Cell | Smooth Wall Cavity, Safe Skin Shedding & Peak Emergence",
+        color: "#e2f0d9", text: "#385723"
+      },
+      '3in-saturated': {
+        emergence: [95, 75, 50, 35, 25],
+        risk: [5, 30, 55, 70, 80],
+        status: "Chamber State: Waterlogged Substrate | Fungal Growth and Oxygen Deprivation",
+        color: "#fce4d6", text: "#c65911"
+      },
+      'tube-dry': {
+        emergence: [95, 85, 75, 65, 60],
+        risk: [5, 18, 28, 38, 42],
+        status: "Chamber State: Artificial Paper Tube (Dry) | Vertical Support Good, Mild Desiccation Risk",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      'tube-ideal': {
+        emergence: [98, 95, 93, 92, 92],
+        risk: [3, 6, 8, 8, 9],
+        status: "Chamber State: Artificial Paper Tube (Optimal Dampness) | Excellent Vertical Support for Skin Shedding",
+        color: "#e2f0d9", text: "#385723"
+      },
+      'tube-saturated': {
+        emergence: [95, 78, 55, 40, 30],
+        risk: [5, 25, 50, 65, 75],
+        status: "Chamber State: Soggy Tube Wall | Tube Collapses and Traps Transforming Moth",
+        color: "#fce4d6", text: "#c65911"
+      }
+    };
+
+    const ctx = document.getElementById('pupationChart').getContext('2d');
+
+    let chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timeline,
+        datasets: [
+          {
+            label: 'Adult Emergence Success (%)',
+            data: matrix['3in-ideal'].emergence,
+            borderColor: '#16a34a',
+            backgroundColor: 'rgba(22, 163, 74, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 5
+          },
+          {
+            label: 'Desiccation & Chamber Risk (%)',
+            data: matrix['3in-ideal'].risk,
+            borderColor: '#dc2626',
+            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y}%`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Developmental Phase (Timeline)',
+              font: { weight: 'bold' }
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Percentage (%)',
+              font: { weight: 'bold' }
+            },
+            min: 0,
+            max: 100
+          }
+        }
+      }
+    });
+
+    function setDepth(depth, btn) {
+      document.querySelectorAll('#depthControls button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedDepth = depth;
+      updateSimulator();
+    }
+
+    function setMoisture(moisture, btn) {
+      document.querySelectorAll('#moistureControls button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedMoisture = moisture;
+      updateSimulator();
+    }
+
+    function updateSimulator() {
+      const key = `${selectedDepth}-${selectedMoisture}`;
+      const data = matrix[key];
+
+      chart.data.datasets[0].data = data.emergence;
+      chart.data.datasets[1].data = data.risk;
+      chart.update();
+
+      const statusBox = document.getElementById('statusBox');
+      statusBox.innerText = data.status;
+      statusBox.style.background = data.color;
+      statusBox.style.color = data.text;
+    }
+  </script>
+</body>
+</html>
