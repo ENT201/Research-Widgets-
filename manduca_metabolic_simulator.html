@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Imaginal Disc Growth & Metabolic Mass Loss Simulator</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .card {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    h3 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 1.25rem;
+      text-align: center;
+      color: #0f172a;
+    }
+    p.subtitle {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 0.875rem;
+      text-align: center;
+      color: #64748b;
+    }
+    .control-group {
+      margin-bottom: 18px;
+    }
+    .control-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 8px;
+      color: #334155;
+      display: block;
+      text-align: center;
+    }
+    .button-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 8px 14px;
+      border: 1px solid #cbd5e1;
+      background-color: #f1f5f9;
+      color: #334155;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.825rem;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      background-color: #e2e8f0;
+    }
+    button.active {
+      background-color: #7c3aed;
+      color: #ffffff;
+      border-color: #6d28d9;
+    }
+    .chart-container {
+      position: relative;
+      height: 320px;
+      width: 100%;
+      margin-top: 15px;
+    }
+    .status {
+      text-align: center;
+      font-weight: 600;
+      padding: 12px 16px;
+      margin-top: 20px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h3>Metabolic Transformation Simulator</h3>
+    <p class="subtitle">Track cumulative metabolic mass loss (CO₂ & H₂O) vs. adult tissue formation (Imaginal Discs) over 14 days of pupation.</p>
+
+    <!-- Temperature Controls -->
+    <div class="control-group">
+      <span class="control-label">Ambient Rearing Temperature:</span>
+      <div class="button-row" id="tempControls">
+        <button onclick="setTemp('cool', this)">18°C (Cool - Suppressed Metabolism)</button>
+        <button class="active" onclick="setTemp('optimal', this)">25°C (Optimal Lab Standard)</button>
+        <button onclick="setTemp('warm', this)">30°C (Warm - Accelerated Metabolism)</button>
+      </div>
+    </div>
+
+    <!-- Chart Canvas -->
+    <div class="chart-container">
+      <canvas id="metabolicChart"></canvas>
+    </div>
+
+    <!-- Dynamic Status Readout -->
+    <div id="statusBox" class="status" style="background:#e2f0d9; color:#385723;">
+      Internal State: Balanced Histolysis & Disc Growth | Normal Mass Loss (~11%) with Peak Adult Differentiation by Day 14
+    </div>
+  </div>
+
+  <script>
+    let selectedTemp = 'optimal';
+
+    const timeline = ['Day 1', 'Day 3', 'Day 6', 'Day 9', 'Day 12', 'Day 14'];
+
+    const matrix = {
+      'cool': {
+        massLoss: [0.5, 1.8, 3.5, 5.2, 7.0, 8.2],
+        discGrowth: [5, 12, 28, 48, 68, 78],
+        status: "Internal State: Slowed Metabolism | Low Mass Loss (~8%), but Delayed Adult Tissue Formation (Eclosion Delayed)",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      'optimal': {
+        massLoss: [0.8, 2.6, 5.2, 7.8, 10.1, 11.5],
+        discGrowth: [8, 20, 50, 78, 92, 98],
+        status: "Internal State: Balanced Histolysis & Disc Growth | Normal Mass Loss (~11%) with Peak Adult Differentiation by Day 14",
+        color: "#e2f0d9", text: "#385723"
+      },
+      'warm': {
+        massLoss: [1.4, 4.2, 8.1, 12.0, 15.4, 17.8],
+        discGrowth: [12, 35, 75, 95, 100, 100],
+        status: "Internal State: Hyper-Metabolism | Rapid Mass Loss (~18%), High Risk of Desiccation Prior to Emergence",
+        color: "#fce4d6", text: "#c65911"
+      }
+    };
+
+    const ctx = document.getElementById('metabolicChart').getContext('2d');
+
+    let chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timeline,
+        datasets: [
+          {
+            label: 'Adult Tissue Differentiation (% Imaginal Disc Growth)',
+            data: matrix['optimal'].discGrowth,
+            borderColor: '#7c3aed',
+            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 5,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Cumulative Body Mass Lost (% CO₂ + H₂O)',
+            data: matrix['optimal'].massLoss,
+            borderColor: '#dc2626',
+            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 5,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y}%`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Pupal Incubation Timeline',
+              font: { weight: 'bold' }
+            }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Imaginal Disc Growth (%)',
+              font: { weight: 'bold' }
+            },
+            min: 0,
+            max: 100
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Cumulative Mass Loss (%)',
+              font: { weight: 'bold' }
+            },
+            min: 0,
+            max: 25,
+            grid: {
+              drawOnChartArea: false
+            }
+          }
+        }
+      }
+    });
+
+    function setTemp(temp, btn) {
+      document.querySelectorAll('#tempControls button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTemp = temp;
+      updateSimulator();
+    }
+
+    function updateSimulator() {
+      const data = matrix[selectedTemp];
+
+      chart.data.datasets[0].data = data.discGrowth;
+      chart.data.datasets[1].data = data.massLoss;
+      chart.update();
+
+      const statusBox = document.getElementById('statusBox');
+      statusBox.innerText = data.status;
+      statusBox.style.background = data.color;
+      statusBox.style.color = data.text;
+    }
+  </script>
+</body>
+</html>
