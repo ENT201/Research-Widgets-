@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pre-Eclosion Visual Development Simulator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 16px; background-color: #f8fafc; color: #1e293b; }
+    .card { max-width: 800px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+    h3 { margin-top: 0; margin-bottom: 6px; font-size: 1.25rem; text-align: center; color: #0f172a; }
+    p.subtitle { margin-top: 0; margin-bottom: 20px; font-size: 0.875rem; text-align: center; color: #64748b; }
+    .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; background: #f1f5f9; padding: 16px; border-radius: 8px; }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    .control-label { font-weight: 600; font-size: 0.825rem; color: #334155; }
+    select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background-color: #ffffff; font-size: 0.85rem; color: #1e293b; outline: none; cursor: pointer; }
+    .chart-container { position: relative; height: 360px; width: 100%; margin-top: 10px; }
+    .status { text-align: center; font-weight: 600; padding: 12px 16px; margin-top: 20px; border-radius: 6px; font-size: 0.875rem; transition: all 0.3s ease; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h3>Pre-Eclosion Visual Development Simulator</h3>
+    <p class="subtitle">Track visible cuticle color darkening and eye-spot clarity alongside internal maturation across microclimates.</p>
+
+    <div class="controls-grid">
+      <div class="control-group">
+        <label class="control-label" for="conditionSelect">Container Environment:</label>
+        <select id="conditionSelect">
+          <option value="optimal">Stable Microclimate (25°C, 65% RH - Normal Progress)</option>
+          <option value="dry">Low Humidity Stress (25°C, 30% RH - Desiccation Risk)</option>
+          <option value="warm">Warm Microclimate (28°C - Accelerated Maturation)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="metricSelect">Show Metrics:</label>
+        <select id="metricSelect">
+          <option value="both">Both (Cuticle Darkening & Adult Eye Clarity)</option>
+          <option value="cuticle">Cuticle Darkening / Sclerotization (%)</option>
+          <option value="eyes">Eye Spot & Scale Visibility (%)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="visualMaturationChart"></canvas>
+    </div>
+
+    <div id="statusBox" class="status" style="background:#e2f0d9; color:#385723;">
+      Maturation Indicator: Steady darkening of the cuticle combined with clear eye-spot definition indicates healthy progress toward eclosion.
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const timeline = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7 (Pre-Eclosion)'];
+
+      const datasets = {
+        optimal: {
+          cuticle: [15, 25, 40, 55, 70, 85, 98],
+          eyes: [5, 12, 25, 45, 68, 88, 100],
+          status: "Maturation Indicator: Steady darkening of the cuticle combined with clear eye-spot definition indicates healthy progress toward eclosion.",
+          color: "#e2f0d9", text: "#385723"
+        },
+        dry: {
+          cuticle: [15, 20, 30, 42, 55, 68, 78],
+          eyes: [5, 10, 18, 30, 48, 62, 72],
+          status: "Maturation Indicator: Delayed visual markers due to desiccation stress. Cuticle appears dull brown rather than deep black; high risk of wing defects.",
+          color: "#fce4d6", text: "#c65911"
+        },
+        warm: {
+          cuticle: [20, 38, 60, 82, 95, 100, 100],
+          eyes: [10, 28, 52, 80, 98, 100, 100],
+          status: "Maturation Indicator: Accelerated development under higher temperature. Specimen reaches pre-eclosion visual markers 2 days earlier.",
+          color: "#fff2cc", text: "#7f6000"
+        }
+      };
+
+      const ctx = document.getElementById('visualMaturationChart').getContext('2d');
+
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: timeline,
+          datasets: [
+            {
+              label: 'Cuticle Darkening (%)',
+              data: [],
+              borderColor: '#78350f',
+              backgroundColor: '#78350f',
+              yAxisID: 'yCuticle',
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 5
+            },
+            {
+              label: 'Adult Eye-Spot Visibility (%)',
+              data: [],
+              borderColor: '#2563eb',
+              backgroundColor: '#2563eb',
+              yAxisID: 'yEyes',
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            x: { title: { display: true, text: 'Pre-Eclosion Progress Timeline', font: { weight: 'bold' } } },
+            yCuticle: {
+              type: 'linear', display: true, position: 'left',
+              title: { display: true, text: 'Cuticle Darkening / Melanization (%)', font: { weight: 'bold' } },
+              min: 0, max: 110
+            },
+            yEyes: {
+              type: 'linear', display: true, position: 'right',
+              title: { display: true, text: 'Eye-Spot & Feature Visibility (%)', font: { weight: 'bold' } },
+              min: 0, max: 110, grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+
+      function updateChart() {
+        const condition = document.getElementById('conditionSelect').value;
+        const metric = document.getElementById('metricSelect').value;
+        const current = datasets[condition];
+
+        chart.data.datasets[0].data = current.cuticle;
+        chart.data.datasets[1].data = current.eyes;
+
+        chart.data.datasets[0].hidden = (metric === 'eyes');
+        chart.data.datasets[1].hidden = (metric === 'cuticle');
+
+        chart.options.scales.yCuticle.display = (metric === 'both' || metric === 'cuticle');
+        chart.options.scales.yEyes.display = (metric === 'both' || metric === 'eyes');
+
+        chart.update();
+
+        const statusBox = document.getElementById('statusBox');
+        statusBox.innerText = current.status;
+        statusBox.style.background = current.color;
+        statusBox.style.color = current.text;
+      }
+
+      document.getElementById('conditionSelect').addEventListener('change', updateChart);
+      document.getElementById('metricSelect').addEventListener('change', updateChart);
+
+      updateChart();
+    });
+  </script>
+</body>
+</html>
