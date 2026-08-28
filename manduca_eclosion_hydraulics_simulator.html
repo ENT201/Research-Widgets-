@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hemolymph Hydraulics & Flight Reactivity Simulator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; padding: 16px; background-color: #f8fafc; color: #1e293b; }
+    .card { max-width: 800px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+    h3 { margin-top: 0; margin-bottom: 6px; font-size: 1.25rem; text-align: center; color: #0f172a; }
+    p.subtitle { margin-top: 0; margin-bottom: 20px; font-size: 0.875rem; text-align: center; color: #64748b; }
+    .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px; background: #f1f5f9; padding: 16px; border-radius: 8px; }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    .control-label { font-weight: 600; font-size: 0.825rem; color: #334155; }
+    select { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background-color: #ffffff; font-size: 0.85rem; color: #1e293b; outline: none; cursor: pointer; }
+    .chart-container { position: relative; height: 360px; width: 100%; margin-top: 10px; }
+    .status { text-align: center; font-weight: 600; padding: 12px 16px; margin-top: 20px; border-radius: 6px; font-size: 0.875rem; transition: all 0.3s ease; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h3>Hemolymph Hydraulics & Wing Inflation Simulator</h3>
+    <p class="subtitle">Model post-eclosion hydraulic wing expansion, chitin sclerotization, and adult flight reactivity.</p>
+
+    <div class="controls-grid">
+      <div class="control-group">
+        <label class="control-label" for="climbSelect">Post-Eclosion Climb Position:</label>
+        <select id="climbSelect">
+          <option value="vertical">Vertical Climbing Structure (Optimal Gravity Alignment)</option>
+          <option value="disturbed">Fell During Inflation (Disturbed Sclerotization)</option>
+          <option value="flat">Flat Bottom / No Climbing Structure (Impaired Hydraulics)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="metricSelect">Show Metrics:</label>
+        <select id="metricSelect">
+          <option value="both">Both (Wing Surface Expansion & Sclerotization Hardness)</option>
+          <option value="expansion">Wing Surface Area Expansion (%)</option>
+          <option value="hardening">Chitin Sclerotization / Hardness (%)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="hydraulicChart"></canvas>
+    </div>
+
+    <div id="statusBox" class="status"></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const timeline = ['0 min (Emergence)', '15 min', '30 min', '45 min', '60 min', '90 min', '120 min (Flight Ready)'];
+
+      const datasets = {
+        vertical: {
+          expansion: [15, 45, 80, 100, 100, 100, 100],
+          hardening: [5, 10, 25, 45, 70, 90, 100],
+          status: "OPTIMAL ECLOSION: Hemolymph pressure fully inflated wing veins vertically on climbing structure. Wings are planar, symmetrical, and fully hardened for flight. Low handling anxiety risk.",
+          color: "#e2f0d9", text: "#385723"
+        },
+        disturbed: {
+          expansion: [15, 40, 60, 65, 65, 65, 65],
+          hardening: [5, 10, 30, 55, 75, 90, 100],
+          status: "DISTURBED DEVELOPMENT: Moth fell from climbing structure during hydraulic expansion. Wings sclerotized while creased, resulting in permanent partial folding (~65% area).",
+          color: "#fff2cc", text: "#7f6000"
+        },
+        flat: {
+          expansion: [15, 25, 30, 35, 35, 35, 35],
+          hardening: [5, 12, 35, 60, 80, 95, 100],
+          status: "CRITICAL FAILURE: No vertical climbing structure available. Gravity prevented hemolymph extension, causing crumpled, non-functional wings (~35% area).",
+          color: "#fce4d6", text: "#c65911"
+        }
+      };
+
+      const ctx = document.getElementById('hydraulicChart').getContext('2d');
+
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: timeline,
+          datasets: [
+            {
+              label: 'Wing Surface Area Expansion (%)',
+              data: [],
+              borderColor: '#0284c7',
+              backgroundColor: '#0284c7',
+              yAxisID: 'yExp',
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 5
+            },
+            {
+              label: 'Chitin Sclerotization / Hardness (%)',
+              data: [],
+              borderColor: '#d97706',
+              backgroundColor: '#d97706',
+              yAxisID: 'yHard',
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            x: { title: { display: true, text: 'Post-Eclosion Timeline (Minutes)', font: { weight: 'bold' } } },
+            yExp: {
+              type: 'linear', display: true, position: 'left',
+              title: { display: true, text: 'Wing Expansion Area (%)', font: { weight: 'bold' } },
+              min: 0, max: 110
+            },
+            yHard: {
+              type: 'linear', display: true, position: 'right',
+              title: { display: true, text: 'Chitin Hardness (%)', font: { weight: 'bold' } },
+              min: 0, max: 110, grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+
+      function updateChart() {
+        const climb = document.getElementById('climbSelect').value;
+        const metric = document.getElementById('metricSelect').value;
+        const current = datasets[climb];
+
+        chart.data.datasets[0].data = current.expansion;
+        chart.data.datasets[1].data = current.hardening;
+
+        chart.data.datasets[0].hidden = (metric === 'hardening');
+        chart.data.datasets[1].hidden = (metric === 'expansion');
+
+        chart.options.scales.yExp.display = (metric === 'both' || metric === 'expansion');
+        chart.options.scales.yHard.display = (metric === 'both' || metric === 'hardening');
+
+        chart.update();
+
+        const statusBox = document.getElementById('statusBox');
+        statusBox.innerText = current.status;
+        statusBox.style.background = current.color;
+        statusBox.style.color = current.text;
+      }
+
+      document.getElementById('climbSelect').addEventListener('change', updateChart);
+      document.getElementById('metricSelect').addEventListener('change', updateChart);
+
+      updateChart();
+    });
+  </script>
+</body>
+</html>
