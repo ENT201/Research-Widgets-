@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subterranean Microclimate & Pupal Survival Simulator</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .card {
+      max-width: 720px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    h3 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 1.25rem;
+      text-align: center;
+      color: #0f172a;
+    }
+    p.subtitle {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 0.875rem;
+      text-align: center;
+      color: #64748b;
+    }
+    .control-group {
+      margin-bottom: 18px;
+    }
+    .control-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 8px;
+      color: #334155;
+      display: block;
+      text-align: center;
+    }
+    .button-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 8px 14px;
+      border: 1px solid #cbd5e1;
+      background-color: #f1f5f9;
+      color: #334155;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.825rem;
+      transition: all 0.2s ease;
+    }
+    button:hover {
+      background-color: #e2e8f0;
+    }
+    button.active {
+      background-color: #0284c7;
+      color: #ffffff;
+      border-color: #0369a1;
+    }
+    .chart-container {
+      position: relative;
+      height: 320px;
+      width: 100%;
+      margin-top: 15px;
+    }
+    .status {
+      text-align: center;
+      font-weight: 600;
+      padding: 12px 16px;
+      margin-top: 20px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h3>Subterranean Microclimate Simulator</h3>
+    <p class="subtitle">Simulate moisture and ventilation inside dark pupal cells to observe risks of mold vs. desiccation.</p>
+
+    <!-- Substrate Moisture Controls -->
+    <div class="control-group">
+      <span class="control-label">Substrate Moisture Level:</span>
+      <div class="button-row" id="moistureControls">
+        <button onclick="setMoisture('dry', this)">Dry Substrate (10% Moisture)</button>
+        <button class="active" onclick="setMoisture('ideal', this)">Optimal Moisture (40-50%)</button>
+        <button onclick="setMoisture('wet', this)">Saturated Substrate (90% Moisture)</button>
+      </div>
+    </div>
+
+    <!-- Container Ventilation Controls -->
+    <div class="control-group">
+      <span class="control-label">Container Airflow / Ventilation:</span>
+      <div class="button-row" id="airflowControls">
+        <button onclick="setAirflow('sealed', this)">Sealed Lidded Box (Zero Airflow)</button>
+        <button class="active" onclick="setAirflow('vented', this)">Mesh Lid (Balanced Airflow)</button>
+        <button onclick="setAirflow('open', this)">Open Top (High Evaporation)</button>
+      </div>
+    </div>
+
+    <!-- Chart Canvas -->
+    <div class="chart-container">
+      <canvas id="microclimateChart"></canvas>
+    </div>
+
+    <!-- Dynamic Status Readout -->
+    <div id="statusBox" class="status" style="background:#e2f0d9; color:#385723;">
+      Microclimate Health: Optimal Homeostasis | Stable Pupal Cuticle & High Emergence Probability (96%)
+    </div>
+  </div>
+
+  <script>
+    let selectedMoisture = 'ideal';
+    let selectedAirflow = 'vented';
+
+    const timeline = ['Day 1', 'Day 4', 'Day 7', 'Day 10', 'Day 14'];
+
+    const matrix = {
+      'dry-sealed': {
+        desiccation: [10, 30, 50, 70, 85],
+        mold: [5, 10, 15, 20, 25],
+        status: "Microclimate Warning: Substrate Drying Out | Pupal Case Losing Hydration Rapidly",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      'dry-vented': {
+        desiccation: [15, 45, 70, 88, 95],
+        mold: [2, 4, 5, 5, 5],
+        status: "Microclimate Critical: High Desiccation Risk | Pupal Shell Shrinking & Abdominal Stiffening",
+        color: "#fce4d6", text: "#c65911"
+      },
+      'dry-open': {
+        desiccation: [25, 60, 85, 98, 100],
+        mold: [0, 0, 0, 0, 0],
+        status: "Microclimate Fatal: Extreme Desiccation | Pupal Mortality Prior to Adult Eclosion",
+        color: "#fce4d6", text: "#c65911"
+      },
+      'ideal-sealed': {
+        desiccation: [5, 8, 10, 12, 15],
+        mold: [10, 25, 55, 80, 92],
+        status: "Microclimate Warning: Stagnant Air | White Fungal Hyphae Coating Outer Substrate",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      'ideal-vented': {
+        desiccation: [4, 5, 6, 7, 8],
+        mold: [3, 4, 5, 5, 6],
+        status: "Microclimate Health: Optimal Homeostasis | Stable Pupal Cuticle & High Emergence Probability (96%)",
+        color: "#e2f0d9", text: "#385723"
+      },
+      'ideal-open': {
+        desiccation: [10, 25, 45, 65, 80],
+        mold: [2, 3, 4, 5, 5],
+        status: "Microclimate Warning: Rapid Evaporation | Soil Surface Crust Crumbling",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      'wet-sealed': {
+        desiccation: [0, 0, 0, 0, 0],
+        mold: [20, 50, 80, 95, 100],
+        status: "Microclimate Fatal: Severe Fungal Infection & Oxygen Deprivation (Rotting)",
+        color: "#fce4d6", text: "#c65911"
+      },
+      'wet-vented': {
+        desiccation: [2, 3, 4, 5, 5],
+        mold: [15, 35, 60, 78, 88],
+        status: "Microclimate Warning: Excessive Moisture | Mold Threads Spreading Near Pupal Spiracles",
+        color: "#fff2cc", text: "#7f6000"
+      },
+      'wet-open': {
+        desiccation: [5, 10, 20, 35, 50],
+        mold: [10, 25, 45, 60, 70],
+        status: "Microclimate Warning: Unstable Fluctuations | Mold Spores Active While Topsoil Dries Out",
+        color: "#fff2cc", text: "#7f6000"
+      }
+    };
+
+    const ctx = document.getElementById('microclimateChart').getContext('2d');
+
+    let chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: timeline,
+        datasets: [
+          {
+            label: 'Desiccation Risk (Drying Out %)',
+            data: matrix['ideal-vented'].desiccation,
+            borderColor: '#ea580c',
+            backgroundColor: 'rgba(234, 88, 12, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 5
+          },
+          {
+            label: 'Fungal Mold / Rot Risk (%)',
+            data: matrix['ideal-vented'].mold,
+            borderColor: '#7c3aed',
+            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${context.parsed.y}%`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Incubation Timeline (Days Subterranean)',
+              font: { weight: 'bold' }
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Risk Probability (%)',
+              font: { weight: 'bold' }
+            },
+            min: 0,
+            max: 100
+          }
+        }
+      }
+    });
+
+    function setMoisture(moisture, btn) {
+      document.querySelectorAll('#moistureControls button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedMoisture = moisture;
+      updateSimulator();
+    }
+
+    function setAirflow(airflow, btn) {
+      document.querySelectorAll('#airflowControls button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedAirflow = airflow;
+      updateSimulator();
+    }
+
+    function updateSimulator() {
+      const key = `${selectedMoisture}-${selectedAirflow}`;
+      const data = matrix[key];
+
+      chart.data.datasets[0].data = data.desiccation;
+      chart.data.datasets[1].data = data.mold;
+      chart.update();
+
+      const statusBox = document.getElementById('statusBox');
+      statusBox.innerText = data.status;
+      statusBox.style.background = data.color;
+      statusBox.style.color = data.text;
+    }
+  </script>
+</body>
+</html>
