@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Larval Feeding & Pupal Size Simulator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .card {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    h3 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 1.25rem;
+      text-align: center;
+      color: #0f172a;
+    }
+    p.subtitle {
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 0.875rem;
+      text-align: center;
+      color: #64748b;
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .control-label {
+      font-weight: 600;
+      font-size: 0.825rem;
+      color: #334155;
+    }
+    select {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background-color: #ffffff;
+      font-size: 0.85rem;
+      color: #1e293b;
+      outline: none;
+      cursor: pointer;
+    }
+    .chart-container {
+      position: relative;
+      height: 360px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .status {
+      text-align: center;
+      font-weight: 600;
+      padding: 12px 16px;
+      margin-top: 20px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h3>Larval Feeding & Pupal Size Simulator</h3>
+    <p class="subtitle">Compare how much food a caterpillar eats versus how large the pupa becomes under different conditions.</p>
+
+    <!-- Controls -->
+    <div class="controls-grid">
+      <div class="control-group">
+        <label class="control-label" for="conditionSelect">Rearing Condition:</label>
+        <select id="conditionSelect">
+          <option value="optimal">Normal (High Quality Food)</option>
+          <option value="restricted">Restricted (Low Quality Food)</option>
+          <option value="heat">Warm Temperature (High Metabolism)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="metricSelect">Show on Graph:</label>
+        <select id="metricSelect">
+          <option value="both">Both Lines</option>
+          <option value="diet">Food Eaten Only (g)</option>
+          <option value="mass">Pupal Weight Only (g)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Chart Canvas -->
+    <div class="chart-container">
+      <canvas id="simplePupalChart"></canvas>
+    </div>
+
+    <!-- Dynamic Status Readout -->
+    <div id="statusBox" class="status" style="background:#e2f0d9; color:#385723;">
+      Summary: Healthy feeding allows caterpillars to reach maximum size, resulting in large, healthy pupae.
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const timeline = [
+        'Caterpillar Day 1', 'Caterpillar Day 3', 'Caterpillar Day 5', 
+        'Pre-Pupa', 'Pupa Day 1', 'Pupa Day 5', 'Pupa Day 10'
+      ];
+
+      const datasets = {
+        optimal: {
+          diet: [4, 12, 28, 28, 28, 28, 28],
+          mass: [1.5, 4.0, 9.0, 7.5, 5.5, 4.8, 4.3],
+          status: "Summary: Healthy feeding allows caterpillars to reach maximum size, resulting in large, healthy pupae.",
+          color: "#e2f0d9", text: "#385723"
+        },
+        restricted: {
+          diet: [2, 6, 14, 14, 14, 14, 14],
+          mass: [1.0, 2.5, 5.0, 4.2, 3.2, 2.8, 2.4],
+          status: "Summary: Limited food leads to smaller caterpillars, producing significantly smaller pupae.",
+          color: "#fff2cc", text: "#7f6000"
+        },
+        heat: {
+          diet: [5, 14, 31, 31, 31, 31, 31],
+          mass: [1.6, 4.2, 8.8, 7.0, 4.6, 3.6, 2.8],
+          status: "Summary: Warm temperatures cause caterpillars to eat more, but faster metabolism burns off energy, resulting in lighter pupae.",
+          color: "#fce4d6", text: "#c65911"
+        }
+      };
+
+      const ctx = document.getElementById('simplePupalChart').getContext('2d');
+
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: timeline,
+          datasets: [
+            {
+              label: 'Food Eaten (g)',
+              data: [],
+              borderColor: '#16a34a',
+              backgroundColor: '#16a34a',
+              yAxisID: 'yDiet',
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 5
+            },
+            {
+              label: 'Body / Pupal Weight (g)',
+              data: [],
+              borderColor: '#2563eb',
+              backgroundColor: '#2563eb',
+              yAxisID: 'yMass',
+              tension: 0.3,
+              borderWidth: 3,
+              pointRadius: 5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top' }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Growth Timeline', font: { weight: 'bold' } }
+            },
+            yDiet: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: { display: true, text: 'Total Food Eaten (g)', font: { weight: 'bold' } },
+              min: 0,
+              max: 35
+            },
+            yMass: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: { display: true, text: 'Weight (g)', font: { weight: 'bold' } },
+              min: 0,
+              max: 10,
+              grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+
+      function updateChart() {
+        const condition = document.getElementById('conditionSelect').value;
+        const metric = document.getElementById('metricSelect').value;
+        const current = datasets[condition];
+
+        chart.data.datasets[0].data = current.diet;
+        chart.data.datasets[1].data = current.mass;
+
+        chart.data.datasets[0].hidden = (metric === 'mass');
+        chart.data.datasets[1].hidden = (metric === 'diet');
+
+        chart.options.scales.yDiet.display = (metric === 'both' || metric === 'diet');
+        chart.options.scales.yMass.display = (metric === 'both' || metric === 'mass');
+
+        chart.update();
+
+        const statusBox = document.getElementById('statusBox');
+        statusBox.innerText = current.status;
+        statusBox.style.background = current.color;
+        statusBox.style.color = current.text;
+      }
+
+      document.getElementById('conditionSelect').addEventListener('change', updateChart);
+      document.getElementById('metricSelect').addEventListener('change', updateChart);
+
+      updateChart();
+    });
+  </script>
+</body>
+</html>
